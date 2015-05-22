@@ -281,7 +281,7 @@ class NewLegislatorsTrigger(Trigger):
 
         ifttt = sorted(ifttt, key=lambda x: x['date'], reverse=True)
 
-        return web.Response(text=json.dumps({'data': ifttt}),
+        return web.Response(text=json.dumps({'data': ifttt[:limit]}),
                             content_type='application/json')
 
 
