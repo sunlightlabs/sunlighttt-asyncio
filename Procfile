@@ -1,1 +1,1 @@
-web: gunicorn web:app -k aiohttp.worker.GunicornWebWorker -b localhost:$PORT
+web: gunicorn web:app -k aiohttp.worker.GunicornWebWorker --log-file -

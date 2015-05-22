@@ -11,7 +11,6 @@ from functools import wraps
 import triggers
 from util import JSONResponse, ErrorResponse
 
-PORT = os.environ.get('PORT', '8000')
 CLIENT_SECRET = os.environ.get('CLIENT_SECRET', '')
 
 STATUS_URL = 'https://congress.api.sunlightfoundation.com'
@@ -176,6 +175,8 @@ app.router.add_route(
 
 
 if __name__ == '__main__':
+
+    PORT = os.environ.get('PORT', '8000')
 
     if not CLIENT_SECRET:
         print('!!! no client secret set, not checking auth.')
