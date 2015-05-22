@@ -167,9 +167,7 @@ class NewBillsQuery(Trigger):
             }
             ifttt.append(record)
 
-        return web.Response(text=json.dumps({'data': ifttt}),
-                            content_type='application/json')
-
+        return util.JSONResponse(ifttt)
 
 
 class NewLawsTrigger(Trigger):
@@ -218,8 +216,7 @@ class NewLawsTrigger(Trigger):
             }
             ifttt.append(record)
 
-        return web.Response(text=json.dumps({'data': ifttt}),
-                            content_type='application/json')
+        return util.JSONResponse(ifttt)
 
 
 class NewLegislatorsTrigger(Trigger):
@@ -281,8 +278,7 @@ class NewLegislatorsTrigger(Trigger):
 
         ifttt = sorted(ifttt, key=lambda x: x['date'], reverse=True)
 
-        return web.Response(text=json.dumps({'data': ifttt[:limit]}),
-                            content_type='application/json')
+        return util.JSONResponse(ifttt[:limit])
 
 
 class UpcomingBillsTrigger(Trigger):
@@ -328,8 +324,7 @@ class UpcomingBillsTrigger(Trigger):
             }
             ifttt.append(record)
 
-        return web.Response(text=json.dumps({'data': ifttt}),
-                            content_type='application/json')
+        return util.JSONResponse(ifttt)
 
 
 congress_birthdays = CongressBirthdays()
