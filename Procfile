@@ -1,0 +1,1 @@
+web: gunicorn web:app -k aiohttp.worker.GunicornWebWorker -b localhost:$PORT
