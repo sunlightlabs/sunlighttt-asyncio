@@ -78,8 +78,8 @@ def test_setup(request):
                 },
                 "new-legislators": {
                     "location": {
-                        "lat": "44.967586",
-                        "lon": "-103.772234",
+                        "lat": 44.967586,
+                        "lng": -103.772234,
                         "address": "19424 Us Highway 85, Belle Fourche, SD 57717",
                         "description": "Geographic Center of the United States"
                     }

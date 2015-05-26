@@ -230,14 +230,16 @@ class NewLegislatorsTrigger(Trigger):
 
         limit = limit or 10
 
+        loc = fields['location']
+
         url = '{}/{}'.format(SUNLIGHT_URL, 'legislators/locate')
         params = {
             'fields': ','.join(
                 ["title", "first_name", "last_name", "bioguide_id",
                  "state", "party", "district", "terms",
                  "twitter_id", "phone", "website"]),
-            'latitude': fields['location']['lat'],
-            'longitude': fields['location']['lon']
+            'latitude': loc['lat'],
+            'longitude': loc.get('lon') or loc.get('lng'),
         }
 
         data = yield from self.get_json(url, params=params)
