@@ -2,8 +2,11 @@ import datetime
 import json
 import re
 
+import pytz
 from aiohttp import web
 from dateutil.parser import parse
+
+EASTERN = pytz.timezone('US/Eastern')
 
 
 class JSONResponse(web.Response):
@@ -98,7 +101,7 @@ def date_to_epoch(dstr):
     #
     # IFTTT epochs need to be in seconds, JS uses milliseconds.
 
-    dt = parse(dstr).replace(hour=0, minute=0, second=0)
+    dt = parse(dstr).replace(hour=0, minute=0, second=0, tzinfo=EASTERN)
     return int(dt.timestamp())
 
 
