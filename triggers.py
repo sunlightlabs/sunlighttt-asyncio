@@ -5,6 +5,7 @@ import os
 import aiohttp
 from aiohttp import web
 from dateutil.parser import parse
+from operator import itemgetter
 
 import util
 from fields import PointField, QueryField
@@ -85,8 +86,9 @@ class CongressBirthdays(Trigger):
             if is_good:
                 legislators.append(legislator)
 
+        legislators = sorted(legislators, key=itemgetter('last_name'))
         legislators = sorted(legislators,
-                             key=lambda x: x['current_birthday'],
+                             key=itemgetter('current_birthday'),
                              reverse=True)
 
         ifttt = []
