@@ -2,4 +2,5 @@ aiohttp>=0.15,<0.16
 aiomcache>=0.1,<0.2
 chardet>=2.3,<2.4
 python_dateutil>=2.4,<2.5
+pytz
 gunicorn>=19.0,<20.0
