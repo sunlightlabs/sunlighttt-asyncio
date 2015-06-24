@@ -313,12 +313,15 @@ class UpcomingBillsTrigger(Trigger):
 
             bill = upcoming.get('bill')
 
+            parts = util.parse_bill_id(upcoming['bill_id'])
+            code = util.bill_code(parts) if parts else upcoming['bill_id'].strip()
+
             record = {
                 'meta': {
                     'id': '{range}/{legislative_day}/{bill_id}'.format(**upcoming),
                     'timestamp': timestamp,
                 },
-                'Code': util.bill_code(util.parse_bill_id(upcoming['bill_id'])),
+                'Code': code,
                 'Title': util.bill_title(bill) if bill else "(Not yet known)",
                 'SponsorName': util.name(bill['sponsor']) if bill else "(Not yet known)",
                 'LegislativeDate': display_date,

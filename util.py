@@ -83,12 +83,14 @@ def name(person):
 
 
 def parse_bill_id(bill_id):
-    parts = re.match(r'([cehjnors]+)(\d+)-(\d+)', bill_id.lower()).groups()
-    return {
-        'bill_type': parts[0],
-        'number': parts[1],
-        'session': parts[2],
-    }
+    match = re.match(r'([cehjnors]+)(\d+)-(\d+)', bill_id.lower())
+    if match:
+        parts = match.groups()
+        return {
+            'bill_type': parts[0],
+            'number': parts[1],
+            'session': parts[2],
+        }
 
 
 def date_to_epoch(dstr):
