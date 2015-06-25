@@ -27,7 +27,7 @@ class Trigger(object):
         limit = request.data.get('limit')
         if limit:
             key = '{}:limit={}'.format(key, limit)
-        return request.path
+        return key
 
     @asyncio.coroutine
     def check(self, fields, before, after, limit):
