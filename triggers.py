@@ -18,13 +18,16 @@ class Trigger(object):
 
     fields = None
 
-    @asyncio.coroutine
-    def check(self, fields, before, after, limit):
-        raise NotImplemented()
-
     @property
     def fields(self):
         return {}
+
+    def cache_key(self, request):
+        return request.path
+
+    @asyncio.coroutine
+    def check(self, fields, before, after, limit):
+        raise NotImplemented()
 
     @asyncio.coroutine
     def get_json(self, url, params=None, headers=None, limit=None):
@@ -123,6 +126,11 @@ class NewBillsQuery(Trigger):
     fields = {
         'query': QueryField()
     }
+
+    def cache_key(self, request):
+        fields = request.data.get('triggerFields')
+        query = fields.get('query')
+        return '{}?query={}'.format(request.path, query)
 
     @asyncio.coroutine
     def check(self, fields, before, after, limit):
@@ -226,6 +234,12 @@ class NewLegislatorsTrigger(Trigger):
     fields = {
         'location': PointField()
     }
+
+    def cache_key(self, request):
+        fields = request.data.get('triggerFields')
+        loc = fields.get('location')
+        return '{}?ll={},{}'.format(
+            request.path, loc['lat'], loc.get('lon') or loc.get('lng'))
 
     @asyncio.coroutine
     def check(self, fields, before, after, limit):

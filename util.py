@@ -1,6 +1,8 @@
 import datetime
 import json
+import random
 import re
+from collections import namedtuple
 
 import pytz
 from aiohttp import web
@@ -9,11 +11,69 @@ from dateutil.parser import parse
 EASTERN = pytz.timezone('US/Eastern')
 
 
+Entry = namedtuple('Entry', ['expires', 'value'])
+
+
+class CappedCache(object):
+    DEFAULT_TIMEOUT = 60
+
+    def __init__(self, max_size=0):
+        self._dict = {}
+        self._max_size = max_size
+
+    def __len__(self):
+        return len(self._dict)
+
+    def __contains__(self, item):
+        val = self.get(item)
+        return val is not None
+
+    def __setitem__(self, key, val):
+        return self.set(key, val, timeout=CappedCache.DEFAULT_TIMEOUT)
+
+    def __getitem__(self, key):
+        return self.get(key)
+
+    def get(self, key):
+        entry = self._dict.get(key)
+        if entry:
+            now = datetime.datetime.utcnow()
+            if now < entry.expires:
+                return entry.value
+            del self._dict[key]
+
+    def set(self, key, value, timeout=None):
+
+        if not timeout:
+            timeout = CappedCache.DEFAULT_TIMEOUT
+
+        now = datetime.datetime.utcnow()
+        expires = now + datetime.timedelta(seconds=timeout)
+
+        self._dict[key] = Entry(expires, value)
+
+        self.prune(ignore=key)
+
+    def prune(self, ignore=None):
+        if self._max_size and len(self._dict) > self._max_size:
+            over = len(self._dict) - self._max_size
+            keys = list(self._dict.keys())
+            if ignore:
+                keys.remove(ignore)
+            for i in range(over):
+                key = random.choice(keys)
+                keys.remove(key)
+                del self._dict[key]
+
+
 class JSONResponse(web.Response):
     def __init__(self, data, **kwargs):
+        self.data = data
         super(JSONResponse, self).__init__(text=json.dumps({'data': data}),
                                            content_type='application/json',
                                            **kwargs)
+    def copy(self):
+        return JSONResponse(self.data)
 
 
 class ErrorResponse(web.HTTPBadRequest):

@@ -4,19 +4,18 @@ import json
 import os
 import re
 import aiohttp
-# import aiomcache
 from aiohttp import web
 from functools import wraps
 
 import triggers
-from util import JSONResponse, ErrorResponse
+from util import JSONResponse, ErrorResponse, CappedCache
 
 CLIENT_SECRET = os.environ.get('CLIENT_SECRET', '')
 
 STATUS_URL = 'https://congress.api.sunlightfoundation.com'
 
 
-# cache = aiomcache.Client("127.0.0.1", 11211)
+cache = CappedCache(max_size=1000)
 
 
 @asyncio.coroutine
@@ -100,28 +99,42 @@ def trigger(request):
         msg = 'No such trigger: {}'.format(name)
         raise web.HTTPInternalServerError(text=msg)
 
-    before = request.data.get('before')
-    after = request.data.get('after')
-    limit = request.data.get('limit')
+    cache_key = handler.cache_key(request)
 
-    if limit == 0:
-        return JSONResponse([])
+    resp = cache.get(cache_key)
 
-    trigger_fields = request.data.get('triggerFields') or {}
+    if resp:
 
-    if handler.fields:
-        if not trigger_fields:
-            return ErrorResponse('triggerFields is required')
-            for field in handler.fields:
-                val = trigger_fields.get(field)
-                if handler.fields[field].required and not val:
-                    return ErrorResponse('{} field is required'.format(field))
+        resp = resp.copy()
 
-    # dstr = json.dumps(trigger_fields, sort_keys=True)
-    # dstr = re.sub(r'[^a-zA-Z0-9]', '', dstr)
-    # key = '{}:{}'.format(name, dstr)
+    else:
 
-    resp = yield from handler.check(trigger_fields, before, after, limit)
+        before = request.data.get('before')
+        after = request.data.get('after')
+        limit = request.data.get('limit')
+
+        if limit == 0:
+            return JSONResponse([])
+
+        trigger_fields = request.data.get('triggerFields') or {}
+
+        if handler.fields:
+            if not trigger_fields:
+                return ErrorResponse('triggerFields is required')
+                for field in handler.fields:
+                    val = trigger_fields.get(field)
+                    if handler.fields[field].required and not val:
+                        return ErrorResponse('{} field is required'.format(field))
+
+        # dstr = json.dumps(trigger_fields, sort_keys=True)
+        # dstr = re.sub(r'[^a-zA-Z0-9]', '', dstr)
+        # key = '{}:{}'.format(name, dstr)
+
+        resp = yield from handler.check(trigger_fields, before, after, limit)
+
+        if isinstance(resp, JSONResponse):
+            cache.set(cache_key, resp, timeout=60)
+
     return resp
 
 
