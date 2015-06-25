@@ -23,6 +23,10 @@ class Trigger(object):
         return {}
 
     def cache_key(self, request):
+        key = request.path
+        limit = request.data.get('limit')
+        if limit:
+            key = '{}:limit={}'.format(key, limit)
         return request.path
 
     @asyncio.coroutine
@@ -128,9 +132,10 @@ class NewBillsQuery(Trigger):
     }
 
     def cache_key(self, request):
+        key = super(NewBillsQuery, self).cache_key(request)
         fields = request.data.get('triggerFields')
         query = fields.get('query')
-        return '{}?query={}'.format(request.path, query)
+        return '{}:query={}'.format(key, query)
 
     @asyncio.coroutine
     def check(self, fields, before, after, limit):
@@ -236,10 +241,11 @@ class NewLegislatorsTrigger(Trigger):
     }
 
     def cache_key(self, request):
+        key = super(NewLegislatorsTrigger, self).cache_key(request)
         fields = request.data.get('triggerFields')
         loc = fields.get('location')
-        return '{}?ll={},{}'.format(
-            request.path, loc['lat'], loc.get('lon') or loc.get('lng'))
+        return '{}:ll={},{}'.format(
+            key, loc['lat'], loc.get('lon') or loc.get('lng'))
 
     @asyncio.coroutine
     def check(self, fields, before, after, limit):
