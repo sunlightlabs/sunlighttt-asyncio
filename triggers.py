@@ -25,7 +25,7 @@ class Trigger(object):
     def cache_key(self, request):
         key = request.path
         limit = request.data.get('limit')
-        if limit:
+        if limit is not None:
             key = '{}:limit={}'.format(key, limit)
         return key
 
