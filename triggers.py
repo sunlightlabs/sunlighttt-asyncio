@@ -228,7 +228,7 @@ class NewLawsTrigger(Trigger):
                 'Title': util.bill_title(bill),
                 'BecameLawOn': util.readable_date(bill['history']['enacted_at']),
                 'OfficialURL': bill['urls']['congress'],
-                'OpenCongressURL': bill['urls']['opencongress'],
+                'OpenCongressURL': bill['urls']['congress'],
                 'date': bill['history']['enacted_at'],
             }
             ifttt.append(record)
