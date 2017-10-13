@@ -125,7 +125,7 @@ def bill_code(bill):
 
 
 def bill_title(bill):
-    return bill.get('short_title') or bill.get('official_title')
+    return '{} {}'.format(bill['number'], bill['title'])
 
 
 def chamber_name(chamber):

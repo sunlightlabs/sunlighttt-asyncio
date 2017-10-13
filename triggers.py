@@ -1,17 +1,15 @@
 import asyncio
 import datetime
-import json
 import os
 import aiohttp
-from aiohttp import web
 from dateutil.parser import parse
 from operator import itemgetter
 
 import util
 from fields import PointField, QueryField
 
-SUNLIGHT_KEY = os.environ.get('SUNLIGHT_KEY')
-SUNLIGHT_URL = 'https://congress.api.sunlightfoundation.com'
+PROPUBLICA_KEY = os.environ.get('PROPUBLICA_KEY')
+PROPUBLICA_URL = 'https://api.propublica.org/congress/v1'
 
 
 class Trigger(object):
@@ -44,7 +42,7 @@ class Trigger(object):
 
         if not headers:
             headers = {}
-        headers.update({'X-APIKEY': SUNLIGHT_KEY})
+        headers.update({'X-API-Key': PROPUBLICA_KEY})
 
         resp = yield from aiohttp.request(
             'get', url, params=params, headers=headers)
@@ -52,6 +50,7 @@ class Trigger(object):
         return data
 
 
+# TODO
 class CongressBirthdays(Trigger):
 
     @asyncio.coroutine
@@ -61,7 +60,7 @@ class CongressBirthdays(Trigger):
         # today = today.replace(hour=0, minute=0, second=0)
         today = today.date()
 
-        url = '{}/{}'.format(SUNLIGHT_URL, 'legislators')
+        url = '{}/{}'.format(PROPUBLICA_URL, 'legislators')
         params = {
             'fields': ','.join(
                 ["title", "first_name", "last_name", "state", "party",
@@ -110,8 +109,8 @@ class CongressBirthdays(Trigger):
                     'timestamp': int(legislator['current_birthday'].timestamp()),
                 },
                 'name': '{title}. {first_name} {last_name}'.format(**legislator),
-                'state': '{state}-{district}'.format(**legislator) \
-                    if legislator.get('district') else legislator['state'],
+                'state': '{state}-{district}'.format(**legislator)
+                         if legislator.get('district') else legislator['state'],
                 'party': legislator['party'],
                 'twitter_username': legislator.get('twitter_id') or '',
                 'birthday_date': util.readable_date(legislator['birthday']),
@@ -125,6 +124,7 @@ class CongressBirthdays(Trigger):
         return util.JSONResponse(ifttt[:limit or 20])
 
 
+# TODO
 class NewBillsQuery(Trigger):
 
     fields = {
@@ -142,7 +142,7 @@ class NewBillsQuery(Trigger):
     @asyncio.coroutine
     def check(self, fields, before, after, limit):
 
-        url = '{}/{}'.format(SUNLIGHT_URL, 'bills/search')
+        url = '{}/{}'.format(PROPUBLICA_URL, 'bills/search')
         params = {
             'fields': ','.join(
                 ["bill_id", "bill_type", "number", "introduced_on",
@@ -187,12 +187,13 @@ class NewBillsQuery(Trigger):
         return util.JSONResponse(ifttt)
 
 
+# TODO
 class NewLawsTrigger(Trigger):
 
     @asyncio.coroutine
     def check(self, fields, before, after, limit):
 
-        url = '{}/{}'.format(SUNLIGHT_URL, 'bills')
+        url = '{}/{}'.format(PROPUBLICA_URL, 'bills')
         params = {
             'fields': ','.join(
                 ["bill_id", "bill_type", "number", "history.enacted_at",
@@ -236,6 +237,7 @@ class NewLawsTrigger(Trigger):
         return util.JSONResponse(ifttt)
 
 
+# TODO
 class NewLegislatorsTrigger(Trigger):
 
     fields = {
@@ -257,55 +259,59 @@ class NewLegislatorsTrigger(Trigger):
 
         limit = limit or 10
 
-        loc = fields['location']
+        # loc = fields['location']
+        #
+        # #
+        # #
+        # # DO GEO LOC TO DISTRICT CONVERSION!
+        # state = loc.state
+        # district = loc.district
+        #
+        #
+        #
 
-        url = '{}/{}'.format(SUNLIGHT_URL, 'legislators/locate')
-        params = {
-            'fields': ','.join(
-                ["title", "first_name", "last_name", "bioguide_id",
-                 "state", "party", "district", "terms",
-                 "twitter_id", "phone", "website"]),
-            'latitude': loc['lat'],
-            'longitude': loc.get('lon') or loc.get('lng'),
-        }
+        state = 'MD'
 
-        data = yield from self.get_json(url, params=params)
+        url = '{}/{}'.format(PROPUBLICA_URL, 'members/new.json')
+        resp = yield from self.get_json(url)
+        data = resp['results'][0]['members']
 
         ifttt = []
 
-        for legislator in data['results']:
+        for legislator in data:
 
-            district = '{}{}'.format(
-                legislator['state'], legislator.get('district') or '')
+            if legislator['state'] == state:
 
-            terms = []
-            for t in legislator['terms']:
-                term_district = '{}{}'.format(
-                    t['state'], t.get('district') or '')
-                if term_district == district:
-                    terms.append(t)
+                print(legislator)
 
-            term_start = terms[0]['start'];
+            # if legislator['chamber'] == 'Senate' and legislator['state']:
+            #     pass
+            #
+            # if legislator['chamber'] == 'House' and legislator['state'] == state and legislator['district'] == district:
+            #     pass
 
-            timestamp = util.time_to_epoch(term_start)
+                district = '{}{}'.format(
+                    legislator['state'], legislator.get('district') or '')
 
-            record = {
-                'meta': {
-                    'id': '{}/{}'.format(legislator['bioguide_id'], district),
-                    'timestamp': timestamp,
-                },
-                'name': '{title}. {first_name} {last_name}'.format(**legislator),
-                'state': '{state}-{district}'.format(**legislator) \
-                    if legislator.get('district') else legislator['state'],
-                'party': legislator['party'],
-                'phone': legislator.get('phone') or '',
-                'website': legislator.get('website') or '',
-                'twitter_username': legislator.get('twitter_id') or '',
-                'date': term_start,
-            }
-            ifttt.append(record)
+                title = 'Sen' if legislator['chamber'] == 'Senate' else 'Rep'
 
-        ifttt = sorted(ifttt, key=lambda x: x['date'], reverse=True)
+                timestamp = util.time_to_epoch(legislator['start_date'])
+
+                record = {
+                    'meta': {
+                        'id': '{}/{}'.format(legislator['id'], district),
+                        'timestamp': timestamp,
+                    },
+                    'name': '{title}. {first_name} {last_name}'.format(title=title, **legislator),
+                    'state': '{state}-{district}'.format(**legislator)
+                             if legislator.get('district') else legislator['state'],
+                    'party': legislator['party'],
+                    'phone': legislator.get('phone') or '',
+                    'website': legislator.get('website') or '',
+                    'twitter_username': legislator.get('twitter_id') or '',
+                    'date': legislator['start_date'],
+                }
+                ifttt.append(record)
 
         return util.JSONResponse(ifttt[:limit])
 
@@ -315,42 +321,38 @@ class UpcomingBillsTrigger(Trigger):
     @asyncio.coroutine
     def check(self, fields, before, after, limit):
 
-        url = '{}/{}'.format(SUNLIGHT_URL, 'upcoming_bills')
-        params = {
-            'fields': ','.join(
-                ["bill_id", "chamber", "legislative_day",
-                 "range", "url", "bill", "scheduled_at"]),
-            'range__exists': 'true',
-            'order': 'scheduled_at',
-        }
+        results = []
 
-        data = yield from self.get_json(url, params=params, limit=limit)
+        for chamber in ('house', 'senate'):
+            url = '{}/{}'.format(PROPUBLICA_URL, 'bills/upcoming/{}.json'.format(chamber))
+            data = yield from self.get_json(url)
+            print(data)
+            for day in data['results']:
+                results.extend(day['bills'])
 
         ifttt = []
 
-        for upcoming in data['results']:
+        for upcoming in results:
 
             timestamp = util.time_to_epoch(upcoming['scheduled_at'])
 
             display_date = util.readable_date(upcoming['legislative_day'])
             if upcoming['range'] == 'week':
-                display_date = "the week of " + display_date;
+                display_date = "the week of " + display_date
 
-            bill = upcoming.get('bill')
-
-            parts = util.parse_bill_id(upcoming['bill_id'])
-            code = util.bill_code(parts) if parts else upcoming['bill_id'].strip()
+            resp = yield from self.get_json(upcoming['api_uri'])
+            bill_data = resp['results'][0]
 
             record = {
                 'meta': {
                     'id': '{range}/{legislative_day}/{bill_id}'.format(**upcoming),
                     'timestamp': timestamp,
                 },
-                'Code': code,
-                'Title': util.bill_title(bill) if bill else "(Not yet known)",
-                'SponsorName': util.name(bill['sponsor']) if bill else "(Not yet known)",
+                'Code': upcoming['bill_number'],
+                'Title': util.bill_title(bill_data),
+                'SponsorName': '{} {}'.format(bill_data['sponsor_title'], bill_data['sponsor']),
                 'LegislativeDate': display_date,
-                'Chamber': util.chamber_name(upcoming['chamber']),
+                'Chamber': upcoming['chamber'].title(),
                 'SourceURL': upcoming['url'],
                 'date': upcoming['legislative_day'],
             }
